@@ -1,12 +1,11 @@
 package de.renz.staticdata;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 public class StaticDataCatalog {
 
@@ -74,7 +73,10 @@ public class StaticDataCatalog {
 				itm.setId(id);
 				itm.setName(item.getAsJsonPrimitive("name").getAsString());
 				itm.setImage(item.getAsJsonObject("image").getAsJsonPrimitive("full").getAsString());
-
+				Iterator<JsonElement> tagIterator = item.getAsJsonArray("tags").iterator();
+				while(tagIterator.hasNext()){
+					itm.getTags().add(tagIterator.next().getAsJsonPrimitive().getAsString());
+				}
 				staticDataList.add(itm);
 			}
 		}
@@ -158,24 +160,38 @@ public class StaticDataCatalog {
 		return false;
 	}
 
-	public StaticData getRandomStaticData(Class<StaticData> clazz, List<StaticData> notAllowedStaticData){
-		return staticDataList.stream()
-				.filter(staticData -> clazz.isInstance(staticData) && !notAllowedStaticData.contains(staticData))
-				.skip(staticDataList.stream()
-						.filter(staticData -> clazz.isInstance(staticData) && !notAllowedStaticData.contains(staticData))
-						.count())
-				.findFirst()
-				.get();
+
+	public StaticData getRandomStaticData(Class<? extends StaticData> clazz, List<StaticData> notAllowedStaticData){
+		List<StaticData> filteredList = staticDataList.stream().filter(staticData -> clazz.isInstance(staticData) &&
+				!notAllowedStaticData.contains(staticData))
+				.collect(Collectors.toList());
+
+		int random = new Random().nextInt(filteredList.size());
+
+		return filteredList.get(random);
 	}
 
-	public StaticData getRandomStaticData(Class<StaticData> clazz){
-		return staticDataList.stream()
-				.filter(staticData -> clazz.isInstance(staticData))
-				.skip(staticDataList.stream()
-						.filter(staticData -> clazz.isInstance(staticData))
-						.count())
-				.findFirst()
-				.get();
+	public StaticData getRandomStaticData(Class<? extends StaticData> clazz){
+		List<StaticData> filteredList = staticDataList.stream().filter(staticData -> clazz.isInstance(staticData))
+				.collect(Collectors.toList());
+
+		int random = new Random().nextInt(filteredList.size());
+
+		return filteredList.get(random);
 	}
 
+	public Item getBoots(){
+		List<StaticData> boots = staticDataList.stream()
+				.filter(staticData -> staticData instanceof Item)
+				.filter(itm -> ((Item) itm).getTags().contains("Boots"))
+				.collect(Collectors.toList());
+
+		int random = new Random().nextInt(boots.size());
+
+		return (Item) boots.get(random);
+	}
+
+	public SummonerSpell getSmite(){
+		return (SummonerSpell) staticDataList.stream().filter(staticData -> staticData.getId().equals("SummonerSmite")).findFirst().get();
+	}
 }
